@@ -1,0 +1,95 @@
+name: ci
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Lint
+        run: ruff check railrank tests
+
+      - name: Unit tests
+        run: pytest -q --durations=10
+
+      # The scorecard is the real test. It trains a model and checks every
+      # claim in the README against the planted answer key -- the leak, the
+      # skew, the position bias, the optimiser against brute force, the gate's
+      # refusal paths. `--quick` only shrinks the sample; every check runs.
+      - name: Scorecard
+        run: python -m railrank.evaluate --quick --searches 9000
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: scorecard-py${{ matrix.python-version }}
+          path: reports/
+
+  # An ML pipeline, not a software one: this builds the image, starts it,
+  # ranks a real request, and fails the build if the container cannot answer
+  # inside the latency budget the promotion gate enforces.
+  container:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Train a model and write the artefact
+        run: python -m railrank.train --searches 9000 --out artefacts/current
+
+      - name: Build the image
+        run: docker build -t railrank:ci .
+
+      - name: Start it
+        run: |
+          docker run -d --name railrank -p 8080:8080 railrank:ci
+          for i in $(seq 1 40); do
+            curl -sf http://127.0.0.1:8080/health && break || sleep 2
+          done
+
+      - name: Rank a request, and hold it to the budget
+        run: python -m railrank.evaluate --quick --searches 9000 --http http://127.0.0.1:8080/rank
+
+      - name: Logs on failure
+        if: failure()
+        run: docker logs railrank
+
+  infrastructure:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.9.8"
+      # Validated, never applied. The module describes a deployment that does
+      # not exist, and the README says so in the same words.
+      - run: terraform -chdir=infra fmt -check -diff
+      - run: terraform -chdir=infra init -backend=false
+      - run: terraform -chdir=infra validate

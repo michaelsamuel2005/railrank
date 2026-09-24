@@ -1,0 +1,7 @@
+# Serving only. Training pulls in mlflow, scipy and pandas; none of that
+# belongs in an image whose job is to answer one question quickly.
+fastapi==0.141.1
+uvicorn==0.46.0
+pydantic==2.13.3
+numpy>=2.0
+xgboost==3.2.0

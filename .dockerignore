@@ -1,0 +1,13 @@
+.git
+.github
+tests
+reports
+mlruns
+mlflow.db
+**/__pycache__
+*.pyc
+.pytest_cache
+.ruff_cache
+infra
+artefacts/*
+!artefacts/current
