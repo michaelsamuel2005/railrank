@@ -44,6 +44,23 @@ jobs:
           name: scorecard-py${{ matrix.python-version }}
           path: reports/
 
+  # Prose has no tests, so it goes stale silently. This checks every figure in
+  # the README against the scorecard committed to the repository -- not against
+  # a fresh run, because the invariant is that the documentation and the report
+  # in the repository agree. It runs before anything can overwrite reports/.
+  documentation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+      - run: python tools/check_readme.py
+
   # An ML pipeline, not a software one: this builds the image, starts it,
   # ranks a real request, and fails the build if the container cannot answer
   # inside the latency budget the promotion gate enforces.

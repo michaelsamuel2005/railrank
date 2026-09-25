@@ -17,14 +17,19 @@ of it against an answer key the generator wrote down.
 
 ```bash
 pip install -e ".[dev]"
-python -m railrank.train                 # fit, evaluate, write artefacts/current
-python -m railrank.evaluate              # 26 checks against the planted key
-pytest -q                                # 109 tests
-docker build -t railrank:local . && docker run -p 8080:8080 railrank:local
+pytest -q                                          # 110 tests
+python -m railrank.train                           # fit, write artefacts/current
+docker build -t railrank:local . && docker run -d -p 8080:8080 railrank:local
+python -m railrank.evaluate --searches 24000 \
+       --http http://127.0.0.1:8080/rank           # 27 checks, the committed run
+python tools/check_readme.py                       # this file against that report
 ```
 
-**26 of 26 checks pass.** Every number below came from
-`reports/scorecard.json`, produced by the command above.
+**27 of 27 checks pass.** Every number below came from
+`reports/scorecard.json`, produced by that command — and
+`tools/check_readme.py` fails the build if any figure in this file is not in
+that report, or cannot be recomputed from it. Without a container to talk to,
+`python -m railrank.evaluate` runs the other 26.
 
 ---
 
@@ -54,7 +59,7 @@ model itself:
 
 | model | NDCG@5 vs truth | MRR vs truth | NDCG@5 on clicks |
 |---|---:|---:|---:|
-| the incumbent (a price sort) | 0.6886 | 0.3391 | 0.3074 |
+| the incumbent (a price sort) | 0.6886 | 0.3414 | 0.2879 |
 | LambdaMART on raw clicks | 0.9432 | 0.6667 | **0.3074** |
 | LambdaMART on corrected labels | **0.9528** | **0.6992** | 0.3031 |
 
@@ -91,7 +96,7 @@ predict — and joining it without an as-of filter is one missing `WHERE` clause
 | honest features | 0.3115 | **0.9442** |
 | with the leak | **0.4106** | 0.8822 |
 
-The leaky model looks **33% better on the only offline metric a real team has**,
+The leaky model looks **32% better on the only offline metric a real team has**,
 and is worse on the truth. Then, because the serving request schema has no
 field for a column that does not exist yet at search time, it goes to
 production without it: **0.8822 collapses to 0.7818, a drop of 11.4%.**
@@ -128,14 +133,19 @@ switched off.
 ## Serving
 
 ```
-in-process   p50 0.738 ms  p99 2.256 ms   over 600 searches
-over HTTP    p50 3.435 ms  p99 6.432 ms   420 requests, all 200, against the container
-budget       p99 25 ms                    91% headroom
+in-process   p50 0.76 ms   p99 2.32 ms    over 600 searches
+over HTTP    p50 3.30 ms   p99 5.46 ms    420 requests, all 200, against the container
+budget       p99 25 ms                    worst p99 observed, 2.6 ms
 ```
 
 Both numbers are reported because they answer different questions. The first is
 what a model change moves; the second is what a caller sees. Quoting only the
 first is how a service ships with a 2 ms model and a 300 ms p99.
+
+These four are wall-clock measurements on one machine and the only figures in
+this file that move between runs — the in-process p99 has been seen between
+1.8 ms and 2.6 ms. Everything else here is bit-identical run to run, and
+there is a test that fails if it stops being.
 
 The process **refuses to start** if the model's recorded feature order does not
 match the code. A model trained before a feature was inserted scores against
@@ -151,13 +161,13 @@ Promotion is a function with conditions, not a button. It reads the
 
 | condition | what it refused, in the scorecard |
 |---|---|
-| feature contract matches the code | — |
+| feature contract matches the code | refused a model recording a feature this code no longer computes |
 | no training/serving skew | refused on the planted `advance_days` skew |
 | beats the incumbent by 0.2% | refused when handed the incumbent as the candidate |
 | p99 inside the budget | refused when the budget was halved |
 
 All four refusal paths are exercised, because a gate that can only approve is a
-formality.
+formality — and a condition nobody has ever watched fail is a comment.
 
 ---
 
@@ -174,8 +184,8 @@ topologically ordered DAG.
 
 ```
 600 journeys, solver against exhaustive enumeration     0 disagreements
-splitting is worth doing on                             12.0% of journeys
-median saving when it is                                12.64%  (8.00 GBP)
+splitting is worth doing on                             14.2% of journeys
+median saving when it is                                12.82%  (7.00 GBP)
 ```
 
 The brute force exists because a solver returning a plausible number is
@@ -234,6 +244,15 @@ unioned the journey's endpoints into the calling set, so it happily priced a
 journey the passenger could not make. Caught by a test asserting it should
 raise.
 
+**A seed that was not a seed.** The optimiser stage seeded each route's fare
+table with `hash(route_key)`. Python randomises string hashing per process
+unless `PYTHONHASHSEED` is set, so two runs of identical code reported 12.0% and
+then 13.2% of journeys worth splitting — and this file quoted one of them as
+reproducible. `zlib.crc32` now, and a test runs the stage in three subprocesses
+and fails unless all three agree. Every figure in this README except the four
+wall-clock latencies is checked against `reports/scorecard.json` in CI, which is
+how the discrepancy became visible.
+
 **A fare table that priced 290 miles at £13**, by compounding a lognormal tail
 with a competitive discount. It made the optimiser look brilliant by making the
 inputs impossible. There is a floor now.
@@ -259,9 +278,10 @@ railrank/
   optimise.py     split-ticket shortest path, and the brute force that checks it
   train.py        one command: fit, evaluate, write the artefact, print the gate
   evaluate.py     the scorecard
+tools/            check_readme.py: every figure in this file, against the report
 infra/            Terraform: ECR, ECS Fargate, logs, and an alarm at the same
                   budget the gate enforces
-tests/            109 tests; several encode the bugs listed above
+tests/            110 tests; several encode the bugs listed above
 ```
 
 **The Terraform has never been applied.** CI runs `terraform fmt -check` and
@@ -272,7 +292,7 @@ question away from falling apart.
 
 **The data is simulated**, so that ground truth is known exactly — an
 instrument cannot be calibrated against data whose true values are unknown. The
-scale is 24,000 searches and 264,000 options on a laptop. I have not worked at
+scale is 24,000 searches and 263,949 options on a laptop. I have not worked at
 production volume and do not claim to.
 
 ---

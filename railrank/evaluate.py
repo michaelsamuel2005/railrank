@@ -39,10 +39,18 @@ def _check(name, passed, expected, observed, note=""):
 
 def score_optimiser(n_per_route: int = 120, seed: int = 11) -> tuple[list, dict]:
     import random
+    import zlib
     rng = random.Random(seed)
     checks, instances, mismatches = [], [], 0
     for key, calling in J.ROUTES.items():
-        fares = O.fare_table(calling, seed=abs(hash(key)) % 9999)
+        # crc32, not hash(). Python randomises string hashing per process
+        # unless PYTHONHASHSEED is set, so `seed=hash(key)` seeded every run
+        # differently: this scorecard reported 12.0% of journeys worth
+        # splitting on one run and 13.2% on the next, from identical code.
+        # A seed that is not actually a seed is worse than no seed, because
+        # the surrounding code claims the number is reproducible.
+        fares = O.fare_table(calling, seed=zlib.crc32(
+            "|".join(key).encode()) % 9999)
         n = len(calling)
         for _ in range(n_per_route):
             a = rng.randrange(0, n - 1)
@@ -333,9 +341,27 @@ def score_gate(metrics_good, metrics_worse, skew_clean, skew_dirty,
         [c.name for c in no_gain.checks if not c.passed],
         "refused because it is not better than what is already running",
         no_gain.verdict[:200], ""))
+
+    # A model fitted before a feature was inserted scores against the wrong
+    # columns and raises nothing at all, so the gate compares the names it
+    # recorded with the names this code computes. Exercised here because a
+    # condition nobody has ever seen fail is a comment, not a check.
+    stale = (*F.FEATURE_NAMES[:-1], "a_feature_this_code_no_longer_computes")
+    on_contract = REG.promotion_gate(metrics_good, metrics_worse, skew_clean,
+                                     p99_ms, feature_names=stale)
+    checks.append(_check(
+        "gate_refuses_on_a_feature_contract_mismatch",
+        not on_contract.promoted and "feature_contract" in
+        [c.name for c in on_contract.checks if not c.passed],
+        "refused because the recorded feature names are not the ones this "
+        "code computes",
+        on_contract.verdict[:200],
+        "The fourth refusal path. All four are exercised, because a gate that "
+        "can only approve is a formality."))
     return checks, {"promote": ok.to_dict(), "refuse_skew": on_skew.to_dict(),
                     "refuse_latency": on_latency.to_dict(),
-                    "refuse_no_gain": no_gain.to_dict()}
+                    "refuse_no_gain": no_gain.to_dict(),
+                    "refuse_contract": on_contract.to_dict()}
 
 
 # ── 6. monitoring ───────────────────────────────────────────────────────────
@@ -547,7 +573,9 @@ def main(n_searches: int = 16000, quick: bool = False,
     passed = sum(c["passed"] for c in checks)
     report = {
         "generated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-        "seed": J.SEED, "n_searches": n_searches, "quick": quick,
+        "seed": J.SEED, "n_searches": n_searches,
+        "n_options": len(options), "n_features": len(F.FEATURE_NAMES),
+        "quick": quick,
         "elapsed_seconds": round(time.time() - started, 2),
         "n_checks": len(checks), "n_passed": passed,
         "all_passed": passed == len(checks),

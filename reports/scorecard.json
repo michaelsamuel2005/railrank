@@ -1,11 +1,13 @@
 {
-  "generated_at": "2026-09-25T13:06:27Z",
+  "generated_at": "2026-09-25T13:31:09Z",
   "seed": 20260924,
   "n_searches": 24000,
+  "n_options": 263949,
+  "n_features": 23,
   "quick": false,
-  "elapsed_seconds": 61.39,
-  "n_checks": 26,
-  "n_passed": 26,
+  "elapsed_seconds": 59.03,
+  "n_checks": 27,
+  "n_passed": 27,
   "all_passed": true,
   "checks": [
     {
@@ -19,14 +21,14 @@
       "check": "splitting_wins_sometimes_not_always",
       "passed": true,
       "expected": "splitting is worth doing on a minority of journeys",
-      "observed": "12.0% of journeys, median saving 12.64% (8.00 GBP)",
+      "observed": "14.2% of journeys, median saving 12.82% (7.00 GBP)",
       "note": "A fare table where splitting always wins, or never does, would make the optimiser look either brilliant or pointless by construction."
     },
     {
       "check": "fares_are_plausible",
       "passed": true,
       "expected": "median through fare between 5 and 120 GBP",
-      "observed": "p10 16, median 36, p90 68 GBP",
+      "observed": "p10 13, median 41, p90 72 GBP",
       "note": "An earlier fare table priced 290 miles at 13 GBP, which made the optimiser look excellent by making the inputs impossible."
     },
     {
@@ -110,7 +112,7 @@
       "check": "model_answers_inside_its_latency_budget",
       "passed": true,
       "expected": "p99 at or under 25.0 ms",
-      "observed": "p50 0.738 ms, p99 2.256 ms over 600 searches (91.0% headroom)",
+      "observed": "p50 0.714 ms, p99 1.153 ms over 600 searches (95.4% headroom)",
       "note": "A better model that cannot answer in time is not a better model."
     },
     {
@@ -124,14 +126,14 @@
       "check": "container_answers_over_http_inside_budget",
       "passed": true,
       "expected": "p99 at or under 25 ms end to end, all responses 200",
-      "observed": "p50 3.435 ms, p99 6.432 ms, statuses {200: 420}",
+      "observed": "p50 3.254 ms, p99 8.215 ms, statuses {200: 420}",
       "note": "Measured against the running container, not in process."
     },
     {
       "check": "gate_promotes_a_better_model",
       "passed": true,
       "expected": "promoted",
-      "observed": "PROMOTED: 23 features in the recorded order; No skew: 2,158 replayed rows agree on all 23 features.; dcg@5_ips 1.2306 against an incumbent 0.7915; needs 0.7931 (+55.47% vs a 0.2% bar); p99 2.3 ms agai",
+      "observed": "PROMOTED: 23 features in the recorded order; No skew: 2,158 replayed rows agree on all 23 features.; dcg@5_ips 1.2306 against an incumbent 0.7915; needs 0.7931 (+55.47% vs a 0.2% bar); p99 1.2 ms agai",
       "note": "Every condition has to hold, and the gate returns its reasons either way."
     },
     {
@@ -145,7 +147,7 @@
       "check": "gate_refuses_on_latency",
       "passed": true,
       "expected": "refused because it cannot answer in time",
-      "observed": "REFUSED \u2014 latency_budget: p99 2.3 ms against a 1 ms budget",
+      "observed": "REFUSED \u2014 latency_budget: p99 1.2 ms against a 1 ms budget",
       "note": "A better model that misses the budget is not a better model."
     },
     {
@@ -154,6 +156,13 @@
       "expected": "refused because it is not better than what is already running",
       "observed": "REFUSED \u2014 beats_incumbent: dcg@5_ips 0.7915 against an incumbent 1.2306; needs 1.2330 (-35.68% vs a 0.2% bar)",
       "note": ""
+    },
+    {
+      "check": "gate_refuses_on_a_feature_contract_mismatch",
+      "passed": true,
+      "expected": "refused because the recorded feature names are not the ones this code computes",
+      "observed": "REFUSED \u2014 feature_contract: recorded feature names do not match this code",
+      "note": "The fourth refusal path. All four are exercised, because a gate that can only approve is a formality."
     },
     {
       "check": "drift_detector_finds_the_planted_reporting_change",
@@ -252,11 +261,11 @@
     },
     "optimiser": {
       "journeys": 600,
-      "journeys_where_splitting_wins": 72,
-      "share_where_splitting_wins": 0.12,
-      "median_saving_pence": 800,
-      "median_saving_pct": 12.64,
-      "max_saving_pence": 7000,
+      "journeys_where_splitting_wins": 85,
+      "share_where_splitting_wins": 0.1417,
+      "median_saving_pence": 700,
+      "median_saving_pct": 12.82,
+      "max_saving_pence": 6100,
       "mean_tickets_when_split": 2.04
     },
     "ranker": {
@@ -556,31 +565,31 @@
     "latency": {
       "inprocess": {
         "n": 600,
-        "mean_ms": 0.829,
-        "p50_ms": 0.738,
-        "p90_ms": 1.031,
-        "p95_ms": 1.229,
-        "p99_ms": 2.256,
-        "max_ms": 5.273,
+        "mean_ms": 0.74,
+        "p50_ms": 0.714,
+        "p90_ms": 0.843,
+        "p95_ms": 0.924,
+        "p99_ms": 1.153,
+        "max_ms": 4.06,
         "mean_options_per_search": 10.85,
         "measurement": "in-process: features, predict and sort, one search per call"
       },
       "budget": {
         "budget_p99_ms": 25.0,
-        "measured_p99_ms": 2.256,
+        "measured_p99_ms": 1.153,
         "within_budget": true,
-        "headroom_ms": 22.744,
-        "headroom_pct": 91.0,
+        "headroom_ms": 23.847,
+        "headroom_pct": 95.4,
         "measurement": "in-process: features, predict and sort, one search per call"
       },
       "http": {
         "n": 400,
-        "mean_ms": 3.563,
-        "p50_ms": 3.435,
-        "p90_ms": 4.141,
-        "p95_ms": 4.545,
-        "p99_ms": 6.432,
-        "max_ms": 7.24,
+        "mean_ms": 3.54,
+        "p50_ms": 3.254,
+        "p90_ms": 3.933,
+        "p95_ms": 4.528,
+        "p99_ms": 8.215,
+        "max_ms": 42.499,
         "statuses": {
           "200": 420
         },
@@ -609,11 +618,11 @@
           {
             "name": "latency_budget",
             "passed": true,
-            "detail": "p99 2.3 ms against a 25 ms budget"
+            "detail": "p99 1.2 ms against a 25 ms budget"
           }
         ],
         "failed": [],
-        "verdict": "PROMOTED: 23 features in the recorded order; No skew: 2,158 replayed rows agree on all 23 features.; dcg@5_ips 1.2306 against an incumbent 0.7915; needs 0.7931 (+55.47% vs a 0.2% bar); p99 2.3 ms against a 25 ms budget"
+        "verdict": "PROMOTED: 23 features in the recorded order; No skew: 2,158 replayed rows agree on all 23 features.; dcg@5_ips 1.2306 against an incumbent 0.7915; needs 0.7931 (+55.47% vs a 0.2% bar); p99 1.2 ms against a 25 ms budget"
       },
       "refuse_skew": {
         "promoted": false,
@@ -636,7 +645,7 @@
           {
             "name": "latency_budget",
             "passed": true,
-            "detail": "p99 2.3 ms against a 25 ms budget"
+            "detail": "p99 1.2 ms against a 25 ms budget"
           }
         ],
         "failed": [
@@ -665,13 +674,13 @@
           {
             "name": "latency_budget",
             "passed": false,
-            "detail": "p99 2.3 ms against a 1 ms budget"
+            "detail": "p99 1.2 ms against a 1 ms budget"
           }
         ],
         "failed": [
           "latency_budget"
         ],
-        "verdict": "REFUSED \u2014 latency_budget: p99 2.3 ms against a 1 ms budget"
+        "verdict": "REFUSED \u2014 latency_budget: p99 1.2 ms against a 1 ms budget"
       },
       "refuse_no_gain": {
         "promoted": false,
@@ -694,13 +703,42 @@
           {
             "name": "latency_budget",
             "passed": true,
-            "detail": "p99 2.3 ms against a 25 ms budget"
+            "detail": "p99 1.2 ms against a 25 ms budget"
           }
         ],
         "failed": [
           "beats_incumbent"
         ],
         "verdict": "REFUSED \u2014 beats_incumbent: dcg@5_ips 0.7915 against an incumbent 1.2306; needs 1.2330 (-35.68% vs a 0.2% bar)"
+      },
+      "refuse_contract": {
+        "promoted": false,
+        "checks": [
+          {
+            "name": "feature_contract",
+            "passed": false,
+            "detail": "recorded feature names do not match this code"
+          },
+          {
+            "name": "no_training_serving_skew",
+            "passed": true,
+            "detail": "No skew: 2,158 replayed rows agree on all 23 features."
+          },
+          {
+            "name": "beats_incumbent",
+            "passed": true,
+            "detail": "dcg@5_ips 1.2306 against an incumbent 0.7915; needs 0.7931 (+55.47% vs a 0.2% bar)"
+          },
+          {
+            "name": "latency_budget",
+            "passed": true,
+            "detail": "p99 1.2 ms against a 25 ms budget"
+          }
+        ],
+        "failed": [
+          "feature_contract"
+        ],
+        "verdict": "REFUSED \u2014 feature_contract: recorded feature names do not match this code"
       }
     },
     "monitoring": {

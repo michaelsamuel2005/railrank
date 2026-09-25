@@ -114,6 +114,26 @@ def test_no_fare_falls_below_the_market_floor():
             assert pence >= scale * O.MARKET_FLOOR - 50
 
 
+def test_the_scorecards_fare_tables_are_the_same_in_every_process():
+    """The scorecard seeded its fare tables with `hash(route_key)`, and Python
+    randomises string hashing per process unless PYTHONHASHSEED is set. The
+    published figure moved from 12.0% of journeys to 13.2% between two runs of
+    identical code. A seed that is not a seed is worse than none, because the
+    surrounding prose claims the number is reproducible."""
+    import subprocess
+    import sys
+
+    prog = (
+        "from railrank import evaluate as E;"
+        "c, s = E.score_optimiser(n_per_route=8);"
+        "print(s['share_where_splitting_wins'], s['median_saving_pence'])"
+    )
+    runs = {subprocess.run([sys.executable, "-c", prog], check=True,
+                           capture_output=True, text=True).stdout.strip()
+            for _ in range(3)}
+    assert len(runs) == 1, f"the scorecard is not reproducible across processes: {runs}"
+
+
 def test_summarise_reports_nothing_when_nothing_splits():
     inst = [{"through_pence": 1000, "split_pence": 1000, "saving_pence": 0,
              "saving_pct": 0.0, "n_tickets": 1}]
