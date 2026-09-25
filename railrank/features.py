@@ -67,6 +67,14 @@ FEATURE_NAMES: tuple[str, ...] = (
     "is_fastest",
     "price_over_route_median_7d",
     "route_median_price_known",
+    # Personalisation. A business traveller will pay to save an hour and a
+    # leisure traveller will spend an hour to save fifteen pounds, so the same
+    # list should not be ranked the same way for both. Indicators rather than
+    # an ordinal, because the three types are not on a scale. Leisure is the
+    # baseline and has no column of its own; giving it one would make the
+    # three columns linearly dependent and tell the model nothing extra.
+    "traveller_is_business",
+    "traveller_is_commuter",
 )
 
 # Ordinal, not one-hot: the ticket types form a genuine flexibility ordering
@@ -296,6 +304,8 @@ def compute(search: SearchContext, option: OptionContext,
         "price_over_route_median_7d": (price_gbp / route_median
                                        if route_median else 1.0),
         "route_median_price_known": 0.0 if route_median is None else 1.0,
+        "traveller_is_business": 1.0 if search.passenger_type == "business" else 0.0,
+        "traveller_is_commuter": 1.0 if search.passenger_type == "commuter" else 0.0,
     }
 
 

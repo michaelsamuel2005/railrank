@@ -1,11 +1,11 @@
 {
-  "generated_at": "2026-09-24T23:40:18Z",
+  "generated_at": "2026-09-25T13:06:27Z",
   "seed": 20260924,
   "n_searches": 24000,
   "quick": false,
-  "elapsed_seconds": 39.06,
-  "n_checks": 25,
-  "n_passed": 25,
+  "elapsed_seconds": 61.39,
+  "n_checks": 26,
+  "n_passed": 26,
   "all_passed": true,
   "checks": [
     {
@@ -19,36 +19,43 @@
       "check": "splitting_wins_sometimes_not_always",
       "passed": true,
       "expected": "splitting is worth doing on a minority of journeys",
-      "observed": "14.8% of journeys, median saving 18.31% (11.00 GBP)",
+      "observed": "12.0% of journeys, median saving 12.64% (8.00 GBP)",
       "note": "A fare table where splitting always wins, or never does, would make the optimiser look either brilliant or pointless by construction."
     },
     {
       "check": "fares_are_plausible",
       "passed": true,
       "expected": "median through fare between 5 and 120 GBP",
-      "observed": "p10 16, median 35, p90 71 GBP",
+      "observed": "p10 16, median 36, p90 68 GBP",
       "note": "An earlier fare table priced 290 miles at 13 GBP, which made the optimiser look excellent by making the inputs impossible."
     },
     {
       "check": "learned_ranker_beats_the_incumbent",
       "passed": true,
       "expected": "a clear gain over the ranker being replaced",
-      "observed": "NDCG@5 against the oracle: 0.6886 for the logging policy against 0.9298 learned",
+      "observed": "NDCG@5 against the oracle: 0.6886 for the logging policy against 0.9432 learned",
       "note": "The bar is the policy that produced the log, not a random ordering."
     },
     {
       "check": "ips_labels_improve_the_true_metric",
       "passed": true,
       "expected": "position-corrected labels rank closer to what travellers preferred",
-      "observed": "NDCG@5 oracle 0.9298 -> 0.9405; MRR 0.6611 -> 0.6927",
+      "observed": "NDCG@5 oracle 0.9432 -> 0.9528; MRR 0.6667 -> 0.6992",
       "note": "The correction goes into the label, because XGBoost takes ranking weights per query group and not per document."
     },
     {
       "check": "the_click_metric_prefers_the_worse_model",
       "passed": true,
       "expected": "the naive click metric ranks the corrected model lower",
-      "observed": "NDCG@5 on clicks 0.3054 for the uncorrected model against 0.2987 for the corrected one, while the oracle says the opposite",
+      "observed": "NDCG@5 on clicks 0.3074 for the uncorrected model against 0.3031 for the corrected one, while the oracle says the opposite",
       "note": "This is the trap the whole project is about. Judge by held-out clicks and you reject the better ranker, because the clicks were produced by the ranker you are replacing."
+    },
+    {
+      "check": "personalising_by_traveller_type_helps",
+      "passed": true,
+      "expected": "a ranker that knows who is searching beats one that does not",
+      "observed": "NDCG@5 against the oracle 0.9402 without the traveller-type features against 0.9528 with them (+1.34%); MRR 0.6908 -> 0.6992",
+      "note": "A business traveller will pay to save an hour and a leisure traveller will spend an hour to save fifteen pounds. The same list should not be ranked the same way for both, and this measures how much that is worth rather than asserting it."
     },
     {
       "check": "corrected_offline_metric_selects_the_right_model",
@@ -61,7 +68,7 @@
       "check": "skew_detector_silent_on_identical_configs",
       "passed": true,
       "expected": "no skew when the two sides agree",
-      "observed": "No skew: 2,158 replayed rows agree on all 21 features.",
+      "observed": "No skew: 2,158 replayed rows agree on all 23 features.",
       "note": "The half everyone forgets. A detector that always fires is one that gets switched off."
     },
     {
@@ -89,21 +96,21 @@
       "check": "leak_inflates_the_metric_you_can_actually_measure",
       "passed": true,
       "expected": "the leaky model wins on held-out clicks, which is the only offline metric a real team has",
-      "observed": "NDCG@5 on clicks 0.3088 honest against 0.4107 leaky; on the oracle the order is reversed, 0.9326 against 0.8827",
+      "observed": "NDCG@5 on clicks 0.3115 honest against 0.4106 leaky; on the oracle the order is reversed, 0.9442 against 0.8822",
       "note": "final_load_factor is the same column as load_factor_at_search read after the train had gone, so it carries the click it is being used to predict. It wins on the click metric and loses on the truth, which is precisely why a leak survives review."
     },
     {
       "check": "leak_costs_accuracy_once_served",
       "passed": true,
       "expected": "and collapses once the column is unavailable at serving time",
-      "observed": "0.8827 offline collapses to 0.7809 in production, a drop of 11.5%",
+      "observed": "0.8822 offline collapses to 0.7818 in production, a drop of 11.4%",
       "note": "The offline number is the one that would have been used to decide."
     },
     {
       "check": "model_answers_inside_its_latency_budget",
       "passed": true,
       "expected": "p99 at or under 25.0 ms",
-      "observed": "p50 0.621 ms, p99 0.924 ms over 600 searches (96.3% headroom)",
+      "observed": "p50 0.738 ms, p99 2.256 ms over 600 searches (91.0% headroom)",
       "note": "A better model that cannot answer in time is not a better model."
     },
     {
@@ -117,14 +124,14 @@
       "check": "container_answers_over_http_inside_budget",
       "passed": true,
       "expected": "p99 at or under 25 ms end to end, all responses 200",
-      "observed": "p50 2.754 ms, p99 4.748 ms, statuses {200: 420}",
+      "observed": "p50 3.435 ms, p99 6.432 ms, statuses {200: 420}",
       "note": "Measured against the running container, not in process."
     },
     {
       "check": "gate_promotes_a_better_model",
       "passed": true,
       "expected": "promoted",
-      "observed": "PROMOTED: 21 features in the recorded order; No skew: 2,158 replayed rows agree on all 21 features.; dcg@5_ips 1.2199 against an incumbent 0.7915; needs 0.7931 (+54.12% vs a 0.2% bar); p99 0.9 ms agai",
+      "observed": "PROMOTED: 23 features in the recorded order; No skew: 2,158 replayed rows agree on all 23 features.; dcg@5_ips 1.2306 against an incumbent 0.7915; needs 0.7931 (+55.47% vs a 0.2% bar); p99 2.3 ms agai",
       "note": "Every condition has to hold, and the gate returns its reasons either way."
     },
     {
@@ -138,14 +145,14 @@
       "check": "gate_refuses_on_latency",
       "passed": true,
       "expected": "refused because it cannot answer in time",
-      "observed": "REFUSED \u2014 latency_budget: p99 0.9 ms against a 0 ms budget",
+      "observed": "REFUSED \u2014 latency_budget: p99 2.3 ms against a 1 ms budget",
       "note": "A better model that misses the budget is not a better model."
     },
     {
       "check": "gate_refuses_without_an_improvement",
       "passed": true,
       "expected": "refused because it is not better than what is already running",
-      "observed": "REFUSED \u2014 beats_incumbent: dcg@5_ips 0.7915 against an incumbent 1.2199; needs 1.2223 (-35.11% vs a 0.2% bar)",
+      "observed": "REFUSED \u2014 beats_incumbent: dcg@5_ips 0.7915 against an incumbent 1.2306; needs 1.2330 (-35.68% vs a 0.2% bar)",
       "note": ""
     },
     {
@@ -245,12 +252,12 @@
     },
     "optimiser": {
       "journeys": 600,
-      "journeys_where_splitting_wins": 89,
-      "share_where_splitting_wins": 0.1483,
-      "median_saving_pence": 1100,
-      "median_saving_pct": 18.31,
-      "max_saving_pence": 5300,
-      "mean_tickets_when_split": 2.01
+      "journeys_where_splitting_wins": 72,
+      "share_where_splitting_wins": 0.12,
+      "median_saving_pence": 800,
+      "median_saving_pct": 12.64,
+      "max_saving_pence": 7000,
+      "mean_tickets_when_split": 2.04
     },
     "ranker": {
       "propensities": {
@@ -302,21 +309,30 @@
           "searches": 7200
         },
         "ltr_raw": {
-          "ndcg@5_oracle": 0.92976,
-          "ndcg@5_clicks": 0.30542,
-          "dcg@5_ips": 1.19667,
-          "dcg@5_clicks": 0.50999,
-          "mrr_oracle": 0.6611,
-          "mrr_clicks": 0.56395,
+          "ndcg@5_oracle": 0.94316,
+          "ndcg@5_clicks": 0.30743,
+          "dcg@5_ips": 1.20851,
+          "dcg@5_clicks": 0.51344,
+          "mrr_oracle": 0.6667,
+          "mrr_clicks": 0.56523,
           "searches": 7200
         },
         "ltr_ips": {
-          "ndcg@5_oracle": 0.94045,
-          "ndcg@5_clicks": 0.29868,
-          "dcg@5_ips": 1.21988,
-          "dcg@5_clicks": 0.50201,
-          "mrr_oracle": 0.6927,
-          "mrr_clicks": 0.54863,
+          "ndcg@5_oracle": 0.95279,
+          "ndcg@5_clicks": 0.30307,
+          "dcg@5_ips": 1.23056,
+          "dcg@5_clicks": 0.50721,
+          "mrr_oracle": 0.6992,
+          "mrr_clicks": 0.55556,
+          "searches": 7200
+        },
+        "ltr_ips_without_traveller_type": {
+          "ndcg@5_oracle": 0.94016,
+          "ndcg@5_clicks": 0.29979,
+          "dcg@5_ips": 1.21801,
+          "dcg@5_clicks": 0.50251,
+          "mrr_oracle": 0.6908,
+          "mrr_clicks": 0.5512,
           "searches": 7200
         }
       },
@@ -368,21 +384,21 @@
             "searches": 7200
           },
           "LTR raw": {
-            "ndcg@5_oracle": 0.92976,
-            "ndcg@5_clicks": 0.30542,
-            "dcg@5_ips": 1.19667,
-            "dcg@5_clicks": 0.50999,
-            "mrr_oracle": 0.6611,
-            "mrr_clicks": 0.56395,
+            "ndcg@5_oracle": 0.94316,
+            "ndcg@5_clicks": 0.30743,
+            "dcg@5_ips": 1.20851,
+            "dcg@5_clicks": 0.51344,
+            "mrr_oracle": 0.6667,
+            "mrr_clicks": 0.56523,
             "searches": 7200
           },
           "LTR IPS": {
-            "ndcg@5_oracle": 0.94045,
-            "ndcg@5_clicks": 0.29868,
-            "dcg@5_ips": 1.21988,
-            "dcg@5_clicks": 0.50201,
-            "mrr_oracle": 0.6927,
-            "mrr_clicks": 0.54863,
+            "ndcg@5_oracle": 0.95279,
+            "ndcg@5_clicks": 0.30307,
+            "dcg@5_ips": 1.23056,
+            "dcg@5_clicks": 0.50721,
+            "mrr_oracle": 0.6992,
+            "mrr_clicks": 0.55556,
             "searches": 7200
           },
           "oracle+noise sd=2.0": {
@@ -419,35 +435,35 @@
       "feature_importance": [
         [
           "is_direct",
-          0.2796
+          0.1987
         ],
         [
           "changes",
-          0.143
+          0.1622
         ],
         [
           "price_over_cheapest",
-          0.0618
+          0.062
         ],
         [
           "duration_rank_pct",
-          0.047
+          0.0534
         ],
         [
           "price_rank_pct",
-          0.0419
+          0.0424
+        ],
+        [
+          "is_cheapest",
+          0.0423
+        ],
+        [
+          "traveller_is_business",
+          0.0362
         ],
         [
           "duration_over_fastest",
-          0.0391
-        ],
-        [
-          "ticket_flexibility",
-          0.0365
-        ],
-        [
-          "is_fastest",
-          0.0348
+          0.0335
         ]
       ]
     },
@@ -461,7 +477,7 @@
         "mismatch_counts": {},
         "largest_absolute_difference": {},
         "skew_detected": false,
-        "verdict": "No skew: 2,158 replayed rows agree on all 21 features."
+        "verdict": "No skew: 2,158 replayed rows agree on all 23 features."
       },
       "skew_off_by_one": {
         "rows_compared": 2158,
@@ -510,61 +526,61 @@
     },
     "leak": {
       "honest": {
-        "ndcg@5_oracle": 0.93265,
-        "ndcg@5_clicks": 0.30884,
-        "dcg@5_ips": 1.19754,
-        "dcg@5_clicks": 0.51424,
-        "mrr_oracle": 0.66539,
-        "mrr_clicks": 0.57104,
+        "ndcg@5_oracle": 0.94424,
+        "ndcg@5_clicks": 0.31154,
+        "dcg@5_ips": 1.21133,
+        "dcg@5_clicks": 0.51941,
+        "mrr_oracle": 0.67305,
+        "mrr_clicks": 0.57334,
         "searches": 7200
       },
       "leaky_offline": {
-        "ndcg@5_oracle": 0.88267,
-        "ndcg@5_clicks": 0.4107,
-        "dcg@5_ips": 1.85119,
-        "dcg@5_clicks": 0.69964,
-        "mrr_oracle": 0.5324,
-        "mrr_clicks": 0.75801,
+        "ndcg@5_oracle": 0.88223,
+        "ndcg@5_clicks": 0.41061,
+        "dcg@5_ips": 1.84954,
+        "dcg@5_clicks": 0.69974,
+        "mrr_oracle": 0.53235,
+        "mrr_clicks": 0.75748,
         "searches": 7200
       },
       "leaky_served": {
-        "ndcg@5_oracle": 0.78091,
-        "ndcg@5_clicks": 0.25013,
-        "dcg@5_ips": 0.97199,
-        "dcg@5_clicks": 0.41224,
-        "mrr_oracle": 0.39389,
-        "mrr_clicks": 0.46963,
+        "ndcg@5_oracle": 0.78183,
+        "ndcg@5_clicks": 0.25185,
+        "dcg@5_ips": 0.9875,
+        "dcg@5_clicks": 0.41529,
+        "mrr_oracle": 0.39659,
+        "mrr_clicks": 0.47166,
         "searches": 7200
       }
     },
     "latency": {
       "inprocess": {
         "n": 600,
-        "mean_ms": 0.643,
-        "p50_ms": 0.621,
-        "p90_ms": 0.763,
-        "p95_ms": 0.803,
-        "p99_ms": 0.924,
-        "max_ms": 1.274,
+        "mean_ms": 0.829,
+        "p50_ms": 0.738,
+        "p90_ms": 1.031,
+        "p95_ms": 1.229,
+        "p99_ms": 2.256,
+        "max_ms": 5.273,
         "mean_options_per_search": 10.85,
         "measurement": "in-process: features, predict and sort, one search per call"
       },
       "budget": {
         "budget_p99_ms": 25.0,
-        "measured_p99_ms": 0.924,
+        "measured_p99_ms": 2.256,
         "within_budget": true,
-        "headroom_ms": 24.076,
-        "headroom_pct": 96.3,
+        "headroom_ms": 22.744,
+        "headroom_pct": 91.0,
         "measurement": "in-process: features, predict and sort, one search per call"
       },
       "http": {
         "n": 400,
-        "mean_ms": 2.842,
-        "p50_ms": 2.754,
-        "p90_ms": 3.199,
-        "p95_ms": 3.371,
-        "p99_ms": 4.748,
-        "max_ms": 6.529,
+        "mean_ms": 3.563,
+        "p50_ms": 3.435,
+        "p90_ms": 4.141,
+        "p95_ms": 4.545,
+        "p99_ms": 6.432,
+        "max_ms": 7.24,
         "statuses": {
           "200": 420
         },
@@ -578,26 +594,26 @@
           {
             "name": "feature_contract",
             "passed": true,
-            "detail": "21 features in the recorded order"
+            "detail": "23 features in the recorded order"
           },
           {
             "name": "no_training_serving_skew",
             "passed": true,
-            "detail": "No skew: 2,158 replayed rows agree on all 21 features."
+            "detail": "No skew: 2,158 replayed rows agree on all 23 features."
           },
           {
             "name": "beats_incumbent",
             "passed": true,
-            "detail": "dcg@5_ips 1.2199 against an incumbent 0.7915; needs 0.7931 (+54.12% vs a 0.2% bar)"
+            "detail": "dcg@5_ips 1.2306 against an incumbent 0.7915; needs 0.7931 (+55.47% vs a 0.2% bar)"
           },
           {
             "name": "latency_budget",
             "passed": true,
-            "detail": "p99 0.9 ms against a 25 ms budget"
+            "detail": "p99 2.3 ms against a 25 ms budget"
           }
         ],
         "failed": [],
-        "verdict": "PROMOTED: 21 features in the recorded order; No skew: 2,158 replayed rows agree on all 21 features.; dcg@5_ips 1.2199 against an incumbent 0.7915; needs 0.7931 (+54.12% vs a 0.2% bar); p99 0.9 ms against a 25 ms budget"
+        "verdict": "PROMOTED: 23 features in the recorded order; No skew: 2,158 replayed rows agree on all 23 features.; dcg@5_ips 1.2306 against an incumbent 0.7915; needs 0.7931 (+55.47% vs a 0.2% bar); p99 2.3 ms against a 25 ms budget"
       },
       "refuse_skew": {
         "promoted": false,
@@ -605,7 +621,7 @@
           {
             "name": "feature_contract",
             "passed": true,
-            "detail": "21 features in the recorded order"
+            "detail": "23 features in the recorded order"
           },
           {
             "name": "no_training_serving_skew",
@@ -615,12 +631,12 @@
           {
             "name": "beats_incumbent",
             "passed": true,
-            "detail": "dcg@5_ips 1.2199 against an incumbent 0.7915; needs 0.7931 (+54.12% vs a 0.2% bar)"
+            "detail": "dcg@5_ips 1.2306 against an incumbent 0.7915; needs 0.7931 (+55.47% vs a 0.2% bar)"
           },
           {
             "name": "latency_budget",
             "passed": true,
-            "detail": "p99 0.9 ms against a 25 ms budget"
+            "detail": "p99 2.3 ms against a 25 ms budget"
           }
         ],
         "failed": [
@@ -634,28 +650,28 @@
           {
             "name": "feature_contract",
             "passed": true,
-            "detail": "21 features in the recorded order"
+            "detail": "23 features in the recorded order"
           },
           {
             "name": "no_training_serving_skew",
             "passed": true,
-            "detail": "No skew: 2,158 replayed rows agree on all 21 features."
+            "detail": "No skew: 2,158 replayed rows agree on all 23 features."
           },
           {
             "name": "beats_incumbent",
             "passed": true,
-            "detail": "dcg@5_ips 1.2199 against an incumbent 0.7915; needs 0.7931 (+54.12% vs a 0.2% bar)"
+            "detail": "dcg@5_ips 1.2306 against an incumbent 0.7915; needs 0.7931 (+55.47% vs a 0.2% bar)"
           },
           {
             "name": "latency_budget",
             "passed": false,
-            "detail": "p99 0.9 ms against a 0 ms budget"
+            "detail": "p99 2.3 ms against a 1 ms budget"
           }
         ],
         "failed": [
           "latency_budget"
         ],
-        "verdict": "REFUSED \u2014 latency_budget: p99 0.9 ms against a 0 ms budget"
+        "verdict": "REFUSED \u2014 latency_budget: p99 2.3 ms against a 1 ms budget"
       },
       "refuse_no_gain": {
         "promoted": false,
@@ -663,28 +679,28 @@
           {
             "name": "feature_contract",
             "passed": true,
-            "detail": "21 features in the recorded order"
+            "detail": "23 features in the recorded order"
           },
           {
             "name": "no_training_serving_skew",
             "passed": true,
-            "detail": "No skew: 2,158 replayed rows agree on all 21 features."
+            "detail": "No skew: 2,158 replayed rows agree on all 23 features."
           },
           {
             "name": "beats_incumbent",
             "passed": false,
-            "detail": "dcg@5_ips 0.7915 against an incumbent 1.2199; needs 1.2223 (-35.11% vs a 0.2% bar)"
+            "detail": "dcg@5_ips 0.7915 against an incumbent 1.2306; needs 1.2330 (-35.68% vs a 0.2% bar)"
           },
           {
             "name": "latency_budget",
             "passed": true,
-            "detail": "p99 0.9 ms against a 25 ms budget"
+            "detail": "p99 2.3 ms against a 25 ms budget"
           }
         ],
         "failed": [
           "beats_incumbent"
         ],
-        "verdict": "REFUSED \u2014 beats_incumbent: dcg@5_ips 0.7915 against an incumbent 1.2199; needs 1.2223 (-35.11% vs a 0.2% bar)"
+        "verdict": "REFUSED \u2014 beats_incumbent: dcg@5_ips 0.7915 against an incumbent 1.2306; needs 1.2330 (-35.68% vs a 0.2% bar)"
       }
     },
     "monitoring": {
@@ -713,7 +729,9 @@
             "is_cheapest": 0.0,
             "is_fastest": 0.0,
             "price_over_route_median_7d": 0.03583,
-            "route_median_price_known": 0.0
+            "route_median_price_known": 0.0,
+            "traveller_is_business": 0.0,
+            "traveller_is_commuter": 0.0
           },
           "worst": [
             [
@@ -743,12 +761,12 @@
           "watch": []
         },
         "predictions": {
-          "psi": 0.00666,
+          "psi": 0.00435,
           "band": "stable",
-          "reference_mean": -0.67695,
-          "current_mean": -0.71723,
-          "reference_p90": 0.26894,
-          "current_p90": 0.22045,
+          "reference_mean": -0.69908,
+          "current_mean": -0.7301,
+          "reference_p90": 0.27684,
+          "current_p90": 0.23134,
           "drifted": false
         },
         "segments": {
@@ -815,7 +833,9 @@
             "is_cheapest": 0.0,
             "is_fastest": 0.0,
             "price_over_route_median_7d": 0.00072,
-            "route_median_price_known": 0.0
+            "route_median_price_known": 0.0,
+            "traveller_is_business": 0.0,
+            "traveller_is_commuter": 0.0
           },
           "worst": [
             [
@@ -843,12 +863,12 @@
           "watch": []
         },
         "predictions": {
-          "psi": 0.00054,
+          "psi": 0.00024,
           "band": "stable",
-          "reference_mean": -0.67804,
-          "current_mean": -0.67586,
-          "reference_p90": 0.27073,
-          "current_p90": 0.26689,
+          "reference_mean": -0.70049,
+          "current_mean": -0.69767,
+          "reference_p90": 0.27391,
+          "current_p90": 0.28019,
           "drifted": false
         },
         "segments": {

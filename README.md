@@ -18,12 +18,12 @@ of it against an answer key the generator wrote down.
 ```bash
 pip install -e ".[dev]"
 python -m railrank.train                 # fit, evaluate, write artefacts/current
-python -m railrank.evaluate              # 25 checks against the planted key
+python -m railrank.evaluate              # 26 checks against the planted key
 pytest -q                                # 109 tests
 docker build -t railrank:local . && docker run -p 8080:8080 railrank:local
 ```
 
-**25 of 25 checks pass.** Every number below came from
+**26 of 26 checks pass.** Every number below came from
 `reports/scorecard.json`, produced by the command above.
 
 ---
@@ -54,12 +54,28 @@ model itself:
 
 | model | NDCG@5 vs truth | MRR vs truth | NDCG@5 on clicks |
 |---|---:|---:|---:|
-| the incumbent (a price sort) | 0.6886 | 0.3391 | 0.3054 |
-| LambdaMART on raw clicks | 0.9298 | 0.6611 | **0.3054** |
-| LambdaMART on corrected labels | **0.9405** | **0.6927** | 0.2987 |
+| the incumbent (a price sort) | 0.6886 | 0.3391 | 0.3074 |
+| LambdaMART on raw clicks | 0.9432 | 0.6667 | **0.3074** |
+| LambdaMART on corrected labels | **0.9528** | **0.6992** | 0.3031 |
 
 **The click metric prefers the worse model.** Judge by held-out clicks and you
 reject the better ranker.
+
+---
+
+## Personalisation, measured rather than assumed
+
+A business traveller will pay to save an hour; a leisure traveller will spend
+an hour to save fifteen pounds. The same list should not be ranked the same way
+for both — and that is a claim, so it gets a number.
+
+| ranker | NDCG@5 vs truth | MRR vs truth |
+|---|---:|---:|
+| without the traveller-type features | 0.9402 | 0.6908 |
+| with them | **0.9528** | **0.6992** |
+
+**+1.34%.** Two indicator columns, leisure as the baseline; a third would make
+them linearly dependent and tell the model nothing extra.
 
 ---
 
@@ -72,13 +88,13 @@ predict — and joining it without an as-of filter is one missing `WHERE` clause
 
 | | NDCG@5 on clicks | NDCG@5 vs truth |
 |---|---:|---:|
-| honest features | 0.3088 | **0.9326** |
-| with the leak | **0.4107** | 0.8827 |
+| honest features | 0.3115 | **0.9442** |
+| with the leak | **0.4106** | 0.8822 |
 
 The leaky model looks **33% better on the only offline metric a real team has**,
 and is worse on the truth. Then, because the serving request schema has no
 field for a column that does not exist yet at search time, it goes to
-production without it: **0.8827 collapses to 0.7809, a drop of 11.5%.**
+production without it: **0.8822 collapses to 0.7818, a drop of 11.4%.**
 
 That sequence is why leaks survive review. The number that would have been used
 to decide went up.
@@ -100,7 +116,7 @@ both paths and compares field by field.
 
 | planted fault | detected |
 |---|---|
-| identical configurations | silent — 2,158 rows agree on all 21 features |
+| identical configurations | silent — 2,158 rows agree on all 23 features |
 | training in UTC, serving on local time | `advance_days`, off by exactly 1.0 |
 | a different fill for a missing seat count | `seats_remaining`, 375 of 2,158 rows |
 
@@ -112,14 +128,14 @@ switched off.
 ## Serving
 
 ```
-in-process   p50 0.62 ms   p99 0.92 ms    over 600 searches
-over HTTP    p50 2.754 ms   p99 4.748 ms    420 requests, all 200, against the container
-budget       p99 25 ms                    96% headroom
+in-process   p50 0.738 ms  p99 2.256 ms   over 600 searches
+over HTTP    p50 3.435 ms  p99 6.432 ms   420 requests, all 200, against the container
+budget       p99 25 ms                    91% headroom
 ```
 
 Both numbers are reported because they answer different questions. The first is
 what a model change moves; the second is what a caller sees. Quoting only the
-first is how a service ships with a 1 ms model and a 300 ms p99.
+first is how a service ships with a 2 ms model and a 300 ms p99.
 
 The process **refuses to start** if the model's recorded feature order does not
 match the code. A model trained before a feature was inserted scores against
@@ -158,8 +174,8 @@ topologically ordered DAG.
 
 ```
 600 journeys, solver against exhaustive enumeration     0 disagreements
-splitting is worth doing on                             14.8% of journeys
-median saving when it is                                18.3%  (11.00 GBP)
+splitting is worth doing on                             12.0% of journeys
+median saving when it is                                12.64%  (8.00 GBP)
 ```
 
 The brute force exists because a solver returning a plausible number is

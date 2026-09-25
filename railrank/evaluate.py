@@ -179,6 +179,29 @@ def score_ranker(searches, options, cfg, quick: bool = False) -> tuple[list, dic
         "clicks and you reject the better ranker, because the clicks were "
         "produced by the ranker you are replacing."))
 
+    # Does personalising by traveller type actually help? The advert this
+    # project was built against names personalised experiences, so the claim
+    # needs a number rather than a feature name.
+    blind_idx = [F.FEATURE_NAMES.index(n) for n in
+                 ("traveller_is_business", "traveller_is_commuter")]
+    X_blind = X.copy()
+    X_blind[:, blind_idx] = 0.0
+    blind = R.train(X_blind[tr], trg, trm, cfg,
+                    labels=R.ips_labels(trm, prop), n_rounds=rounds)
+    m_blind = R.evaluate(blind.score(X_blind[te]), teg, tem, propensities=prop)
+    checks.append(_check(
+        "personalising_by_traveller_type_helps",
+        m_ips["ndcg@5_oracle"] > m_blind["ndcg@5_oracle"],
+        "a ranker that knows who is searching beats one that does not",
+        f"NDCG@5 against the oracle {m_blind['ndcg@5_oracle']:.4f} without the "
+        f"traveller-type features against {m_ips['ndcg@5_oracle']:.4f} with "
+        f"them ({100 * (m_ips['ndcg@5_oracle'] - m_blind['ndcg@5_oracle']) / m_blind['ndcg@5_oracle']:+.2f}%); "
+        f"MRR {m_blind['mrr_oracle']:.4f} -> {m_ips['mrr_oracle']:.4f}",
+        "A business traveller will pay to save an hour and a leisure traveller "
+        "will spend an hour to save fifteen pounds. The same list should not "
+        "be ranked the same way for both, and this measures how much that is "
+        "worth rather than asserting it."))
+
     # Which offline metric would actually pick the right model?
     rng = np.random.default_rng(0)
     util = np.asarray([m["true_utility"] for m in tem], dtype=np.float32)
@@ -213,7 +236,8 @@ def score_ranker(searches, options, cfg, quick: bool = False) -> tuple[list, dic
         "decides which model ships."))
 
     detail = {"propensities": prop, "metrics": {
-        "logging_policy": m_incumbent, "ltr_raw": m_raw, "ltr_ips": m_ips},
+        "logging_policy": m_incumbent, "ltr_raw": m_raw, "ltr_ips": m_ips,
+        "ltr_ips_without_traveller_type": m_blind},
         "model_selection": {"candidates": table,
                             "spearman_naive_vs_oracle": round(rho_naive, 4),
                             "spearman_ips_vs_oracle": round(rho_ips, 4)},
