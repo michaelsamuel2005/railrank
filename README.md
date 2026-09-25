@@ -133,19 +133,22 @@ switched off.
 ## Serving
 
 ```
-in-process   p50 0.76 ms   p99 2.32 ms    over 600 searches
-over HTTP    p50 3.30 ms   p99 5.46 ms    420 requests, all 200, against the container
-budget       p99 25 ms                    worst p99 observed, 2.6 ms
+in-process   p50 0.714 ms  p99 1.153 ms   over 600 searches
+over HTTP    p50 3.254 ms  p99 8.215 ms   420 requests, all 200, against the container
+budget       p99 25 ms
 ```
 
 Both numbers are reported because they answer different questions. The first is
 what a model change moves; the second is what a caller sees. Quoting only the
 first is how a service ships with a 2 ms model and a 300 ms p99.
 
-These four are wall-clock measurements on one machine and the only figures in
-this file that move between runs — the in-process p99 has been seen between
-1.8 ms and 2.6 ms. Everything else here is bit-identical run to run, and
-there is a test that fails if it stops being.
+These four are wall-clock measurements on one laptop and the only figures in
+this file that move between runs: across five runs of the same command the
+in-process p99 ranged from 1.1 ms to 2.6 ms and the HTTP p99 from 5.2 ms to
+8.3 ms. The four above are the committed run, exactly, rather than the best
+one — `tools/check_readme.py` reads them straight out of
+`reports/scorecard.json` and fails if they drift apart. Everything else in this
+file is bit-identical run to run, and a test fails if that stops being true.
 
 The process **refuses to start** if the model's recorded feature order does not
 match the code. A model trained before a feature was inserted scores against

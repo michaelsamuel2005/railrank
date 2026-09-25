@@ -42,13 +42,13 @@ ROOT = Path(__file__).resolve().parent.parent
 # Keyed by the string as the README prints it. The reason is the point of the
 # entry: an exemption without one is indistinguishable from an oversight.
 EXEMPT: dict[str, str] = {
-    "0.76": "wall-clock p50 in process; the README says these four move",
-    "2.32": "wall-clock p99 in process",
-    "3.30": "wall-clock p50 over HTTP",
-    "5.46": "wall-clock p99 over HTTP",
-    "1.8": "stated lower end of the observed p99 range",
-    "2.6": "stated upper end of the observed p99 range",
     "25": "the latency budget, a constant in registry.py",
+    "1.1": "the low end of the in-process p99 range observed over five runs",
+    "2.6": "the high end of that range",
+    "5.2": "the low end of the HTTP p99 range observed over five runs",
+    "8.3": "the high end of that range",
+    "600": "searches measured, a parameter of the run",
+    "420": "requests measured over HTTP",
     "0.2": "the promotion gate's minimum improvement, a constant",
     "21": "0.42%/day compounded over 45 days; arithmetic on two constants",
     "2": "prose: 'a 2 ms model and a 300 ms p99'",
@@ -92,6 +92,17 @@ DERIVED: dict[str, tuple[str, object]] = {
     "23": ("the feature contract's length",
            lambda r: r["n_features"]),
     "24000": ("searches generated", lambda r: r["n_searches"]),
+    # The four wall-clock figures. Exempting them would let the README quote
+    # whichever run flattered the project; reading them out of the committed
+    # report instead means the prose and the report move together or not at all.
+    "0.714": ("in-process p50, from the committed run",
+              lambda r: r["stages"]["latency"]["inprocess"]["p50_ms"]),
+    "1.153": ("in-process p99, from the committed run",
+              lambda r: r["stages"]["latency"]["inprocess"]["p99_ms"]),
+    "3.254": ("HTTP p50, from the committed run",
+              lambda r: r["stages"]["latency"]["http"]["p50_ms"]),
+    "8.215": ("HTTP p99, from the committed run",
+              lambda r: r["stages"]["latency"]["http"]["p99_ms"]),
     "27": ("checks in the scorecard", lambda r: r["n_checks"]),
     "26": ("the checks that do not need a running container",
            lambda r: r["n_checks"] - 1),
